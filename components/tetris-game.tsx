@@ -111,7 +111,7 @@ export default function TetrisGame({ onReturn, onGameOver, onLeaderboard, onLogi
   const updateBoard = useCallback(() => { 
     const newBoard = board.map((row) => [...row]) // sao chep bang hien tai
     
-    // DAT KHOI HIEN TAI VAO BANG
+    // dat khoi hien tai vao bang
     for (let y = 0; y < currentPiece.shape.length; y++) 
       for (let x = 0; x < currentPiece.shape[y].length; x++)
         if (currentPiece.shape[y][x]) {
