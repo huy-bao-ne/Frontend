@@ -38,7 +38,7 @@ export default function LoginPage() {
       // *** START OF BACKEND INTEGRATION ***
       // 1. Define your backend API endpoint for login
       // Using http for local development to avoid SSL errors
-      const apiEndpoint = "backend-production-e0bb.up.railway.app/api/v1/accounts/login";
+      const apiEndpoint = "https://backend-production-e0bb.up.railway.app/api/v1/accounts/login";
 
       // 2. Send the login data to your backend
       const response = await fetch(apiEndpoint, {
