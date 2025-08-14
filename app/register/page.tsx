@@ -1,84 +1,107 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import TetorisLogo from "@/components/tetris-logo"
-import TetrisBackground from "@/components/tetris-background"
-import TetorisButton from "@/components/tetris-button"
-import { useAuth } from "@/lib/hooks/useAuth"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import TetorisLogo from "@/components/tetris-logo";
+import TetrisBackground from "@/components/tetris-background";
+// import TetorisButton from "@/components/tetris-button"
+// import { useAuth } from "@/lib/hooks/useAuth"
 
 // TRANG DANG KY TAI KHOAN MOI
 export default function RegisterPage() {
-  const router = useRouter()
-  const [inputName, setInputName] = useState("") // ten nguoi dung
-  const [inputPassword, setInputPassword] = useState("") // mat khau
-  const [confirmPassword, setConfirmPassword] = useState("") // xac nhan mat khau
-  const [isRegistering, setIsRegistering] = useState(false) // trang thai dang dang ky
-  const [registerSuccess, setRegisterSuccess] = useState(false) // dang ky thanh cong
-  const [error, setError] = useState("") // thong bao loi
-  const { register } = useAuth() // ham dang ky tu hook
+  const router = useRouter();
+  const [inputName, setInputName] = useState(""); // ten nguoi dung
+  const [inputPassword, setInputPassword] = useState(""); // mat khau
+  const [confirmPassword, setConfirmPassword] = useState(""); // xac nhan mat khau
+  const [isRegistering, setIsRegistering] = useState(false); // trang thai dang dang ky
+  const [registerSuccess, setRegisterSuccess] = useState(false); // dang ky thanh cong
+  const [error, setError] = useState(""); // thong bao loi
+  // const { register } = useAuth() // ham dang ky tu hook
 
   // XU LY DANG KY TAI KHOAN
   const handleRegister = async () => {
     // reset loi cu
-    setError("")
-    
+    setError("");
+
     // kiem tra du lieu dau vao
     if (!inputName.trim()) {
-      setError("Username cannot be empty!")
-      return
-    }
-    
-    if (inputName.trim().length < 3) {
-      setError("Username must be at least 3 characters!")
-      return
-    }
-    
-    if (!inputPassword) {
-      setError("Password cannot be empty!")
-      return
-    }
-    
-    if (inputPassword.length < 6) {
-      setError("Password must be at least 6 characters!")
-      return
-    }
-    
-    if (inputPassword !== confirmPassword) {
-      setError("Password confirmation does not match!")
-      return
+      setError("Username cannot be empty!");
+      return;
     }
 
-    setIsRegistering(true)
-    
+    if (inputName.trim().length < 3) {
+      setError("Username must be at least 3 characters!");
+      return;
+    }
+
+    if (!inputPassword) {
+      setError("Password cannot be empty!");
+      return;
+    }
+
+    if (inputPassword.length < 6) {
+      setError("Password must be at least 6 characters!");
+      return;
+    }
+
+    if (inputPassword !== confirmPassword) {
+      setError("Password confirmation does not match!");
+      return;
+    }
+
+    setIsRegistering(true);
+
     try {
-      // gia lap thoi gian xu ly
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // dang ky thanh cong - su dung ham register tu hook
-      register(inputName.trim(), inputPassword)
-      setRegisterSuccess(true)
-      
+      // *** START OF BACKEND INTEGRATION ***
+      // 1. Define your backend API endpoint for registration
+      const apiEndpoint = "http://localhost:3001/api/v1/accounts/register";
+
+      // 2. Send the registration data to your backend
+      const response = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: inputName.trim(),
+          password: inputPassword,
+        }),
+      });
+
+      // 3. Handle the response from the backend
+      if (!response.ok) {
+        // If the server returns an error (e.g., 400, 409, 500)
+        // We try to parse the error message from the backend's response body
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "An error occurred. Please try again."
+        );
+      }
+
+      // If we get here, the backend registration was successful
+      // *** END OF BACKEND INTEGRATION ***
+      setRegisterSuccess(true);
+
       // chuyen ve trang chu sau 2 giay
       setTimeout(() => {
-        router.push('/') 
-      }, 2000)
+        router.push("/login");
+      }, 2000);
     } catch (err: any) {
-      setError(err.message || "An error occurred during registration!")
-      setIsRegistering(false)
+      setError(err.message || "An error occurred during registration!");
+      setIsRegistering(false);
     }
-  }
+  };
 
   // QUAY VE TRANG DANG NHAP
   const backToLogin = () => {
-    router.push('/login')
-  }
+    router.push("/login");
+  };
 
   // QUAY VE TRANG CHU
   const backToHome = () => {
-    router.push('/')
-  }
+    router.push("/");
+  };
 
   // GIAO DIEN TRANG DANG KY
   return (
@@ -116,34 +139,43 @@ export default function RegisterPage() {
               transition={{ duration: 0.6 }}
               className="text-center"
             >
-              <motion.div 
+              <motion.div
                 className="text-6xl mb-6"
-                animate={{ 
+                animate={{
                   rotate: [0, 10, -10, 0],
-                  scale: [1, 1.1, 1]
+                  scale: [1, 1.1, 1],
                 }}
-                transition={{ 
+                transition={{
                   duration: 2,
                   repeat: Infinity,
-                  repeatType: "reverse"
+                  repeatType: "reverse",
                 }}
               >
                 🎉
               </motion.div>
-              
+
               <div className="bg-gradient-to-r from-green-400 to-green-600 text-transparent bg-clip-text">
-                <h2 className="text-2xl font-bold mb-4" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+                <h2
+                  className="text-2xl font-bold mb-4"
+                  style={{ fontFamily: "'Press Start 2P', monospace" }}
+                >
                   REGISTRATION SUCCESS!
                 </h2>
               </div>
-              
+
               <div className="bg-gradient-to-r from-yellow-300 to-yellow-500 p-4 rounded-lg border-2 border-yellow-400 mb-4">
-                <p className="text-black text-sm font-bold" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+                <p
+                  className="text-black text-sm font-bold"
+                  style={{ fontFamily: "'Press Start 2P', monospace" }}
+                >
                   🌟 Welcome {inputName}! 🌟
                 </p>
               </div>
-              
-              <div className="flex items-center justify-center gap-2 text-white text-xs" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+
+              <div
+                className="flex items-center justify-center gap-2 text-white text-xs"
+                style={{ fontFamily: "'Press Start 2P', monospace" }}
+              >
                 <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Redirecting to home...
               </div>
@@ -151,10 +183,13 @@ export default function RegisterPage() {
           ) : (
             // FORM NHAP THONG TIN
             <div>
-              <h2 className="text-2xl font-bold text-yellow-300 mb-6 text-center" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+              <h2
+                className="text-2xl font-bold text-yellow-300 mb-6 text-center"
+                style={{ fontFamily: "'Press Start 2P', monospace" }}
+              >
                 CREATE NEW ACCOUNT
               </h2>
-              
+
               {/* THONG BAO LOI */}
               {error && (
                 <motion.div
@@ -176,7 +211,10 @@ export default function RegisterPage() {
 
               {/* NHAP TEN NGUOI DUNG */}
               <div className="mb-4">
-                <label className="flex items-center gap-2 text-yellow-300 text-sm font-bold mb-3" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+                <label
+                  className="flex items-center gap-2 text-yellow-300 text-sm font-bold mb-3"
+                  style={{ fontFamily: "'Press Start 2P', monospace" }}
+                >
                   👤 USERNAME:
                 </label>
                 <input
@@ -185,7 +223,10 @@ export default function RegisterPage() {
                   onChange={(e) => setInputName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   className="w-full px-4 py-3 bg-gray-800/80 border-2 border-gray-600 text-white rounded-lg focus:border-yellow-300 focus:bg-gray-700/80 focus:outline-none transition-all duration-300 backdrop-blur-sm"
-                  style={{ fontFamily: "'Press Start 2P', monospace", fontSize: "12px" }}
+                  style={{
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: "12px",
+                  }}
                   placeholder="Enter your username..."
                   disabled={isRegistering}
                 />
@@ -193,7 +234,10 @@ export default function RegisterPage() {
 
               {/* NHAP MAT KHAU */}
               <div className="mb-4">
-                <label className="flex items-center gap-2 text-yellow-300 text-sm font-bold mb-3" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+                <label
+                  className="flex items-center gap-2 text-yellow-300 text-sm font-bold mb-3"
+                  style={{ fontFamily: "'Press Start 2P', monospace" }}
+                >
                   🔒 PASSWORD:
                 </label>
                 <input
@@ -202,7 +246,10 @@ export default function RegisterPage() {
                   onChange={(e) => setInputPassword(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   className="w-full px-4 py-3 bg-gray-800/80 border-2 border-gray-600 text-white rounded-lg focus:border-yellow-300 focus:bg-gray-700/80 focus:outline-none transition-all duration-300 backdrop-blur-sm"
-                  style={{ fontFamily: "'Press Start 2P', monospace", fontSize: "12px" }}
+                  style={{
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: "12px",
+                  }}
                   placeholder="Enter password..."
                   disabled={isRegistering}
                 />
@@ -210,7 +257,10 @@ export default function RegisterPage() {
 
               {/* XAC NHAN MAT KHAU */}
               <div className="mb-6">
-                <label className="flex items-center gap-2 text-yellow-300 text-sm font-bold mb-3" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+                <label
+                  className="flex items-center gap-2 text-yellow-300 text-sm font-bold mb-3"
+                  style={{ fontFamily: "'Press Start 2P', monospace" }}
+                >
                   🔐 CONFIRM PASSWORD:
                 </label>
                 <input
@@ -219,7 +269,10 @@ export default function RegisterPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   className="w-full px-4 py-3 bg-gray-800/80 border-2 border-gray-600 text-white rounded-lg focus:border-yellow-300 focus:bg-gray-700/80 focus:outline-none transition-all duration-300 backdrop-blur-sm"
-                  style={{ fontFamily: "'Press Start 2P', monospace", fontSize: "12px" }}
+                  style={{
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: "12px",
+                  }}
                   placeholder="Confirm password..."
                   disabled={isRegistering}
                 />
@@ -252,7 +305,12 @@ export default function RegisterPage() {
                 {/* DUONG PHAN CACH */}
                 <div className="flex items-center justify-center my-4">
                   <div className="border-t border-gray-600 flex-grow"></div>
-                  <span className="px-4 text-gray-400 text-xs" style={{ fontFamily: "'Press Start 2P', monospace" }}>OR</span>
+                  <span
+                    className="px-4 text-gray-400 text-xs"
+                    style={{ fontFamily: "'Press Start 2P', monospace" }}
+                  >
+                    OR
+                  </span>
                   <div className="border-t border-gray-600 flex-grow"></div>
                 </div>
 
@@ -289,5 +347,5 @@ export default function RegisterPage() {
         </motion.div>
       </div>
     </div>
-  )
+  );
 }

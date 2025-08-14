@@ -1,50 +1,99 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import TetorisLogo from "@/components/tetris-logo"
-import TetrisBackground from "@/components/tetris-background"
-import TetorisButton from "@/components/tetris-button"
-import { useAuth } from "@/lib/hooks/useAuth"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import TetorisLogo from "@/components/tetris-logo";
+import TetrisBackground from "@/components/tetris-background";
+import TetorisButton from "@/components/tetris-button";
+// import { useAuth } from "@/lib/hooks/useAuth";
+// Định nghĩa kiểu dữ liệu cho User để nhất quán với token
+interface User {
+  username: string;
+}
+
+// Hàm giải mã JWT, giống hệt như trong trang Game
+const decodeToken = (token: string): (User & { exp: number }) | null => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    console.error("Failed to decode token:", e);
+    return null;
+  }
+};
 
 // TRANG CHU - MENU CHINH CUA GAME
 export default function Home() {
-  const router = useRouter() // dieu huong trang
-  const [showMenu, setShowMenu] = useState(false) // hien thi menu
-  const { user, logout, isLoading } = useAuth() // thong tin nguoi dung
+  const router = useRouter(); // dieu huong trang
+  const [showMenu, setShowMenu] = useState(false); // hien thi menu
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // HIEN THI MENU SAU 1 GIAY CHO ANIMATION
   useEffect(() => {
-    const timer = setTimeout(() => setShowMenu(true), 1000)
-    return () => clearTimeout(timer)
-  }, [])
+    // 1. Timer cho animation của menu
+    const menuTimer = setTimeout(() => setShowMenu(true), 1000);
+
+    // 2. Kiểm tra trạng thái đăng nhập từ localStorage
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      const decodedUser = decodeToken(token);
+      // Kiểm tra token có hợp lệ và còn hạn không
+      if (decodedUser && decodedUser.exp * 1000 > Date.now()) {
+        setUser({ username: decodedUser.username });
+      } else {
+        // Nếu token không hợp lệ hoặc hết hạn, xóa nó đi
+        localStorage.removeItem("authToken");
+      }
+    }
+    setIsLoading(false);
+
+    // Dọn dẹp timer khi component bị hủy
+    return () => clearTimeout(menuTimer);
+  }, []);
+
+  // Hàm đăng xuất cục bộ
+  const logout = () => {
+    localStorage.removeItem("authToken");
+    setUser(null);
+    // Tùy chọn: có thể thêm router.push('/') để đảm bảo giao diện cập nhật
+  };
 
   // BAT DAU CHOI GAME
   const startGame = () => {
     // cho phep choi ngay khong can dang nhap
-    router.push('/game')
-  }
+    router.push("/game");
+  };
 
   // MO TRANG CAI DAT
   const openSettings = () => {
-    router.push('/settings')
-  }
+    router.push("/settings");
+  };
 
   const openLeaderboard = () => {
-    router.push('/leaderboard')
-  }
+    router.push("/leaderboard");
+  };
 
   const quitGame = () => {
-    window.close()
+    window.close();
     setTimeout(() => {
-      window.location.href = "about:blank"
-    }, 100)
-  }
+      window.location.href = "about:blank";
+    }, 100);
+  };
 
   const openLogin = () => {
-    router.push('/login')
-  }
+    router.push("/login");
+  };
 
   // GIAO DIEN TRANG CHU
   return (
@@ -54,16 +103,19 @@ export default function Home() {
         <div className="absolute top-6 right-6 z-50">
           {user ? (
             // HIEN THI THONG TIN NGUOI DUNG VA NUT DANG XUAT
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-3 bg-black/80 px-4 py-2 rounded-lg border-2 border-yellow-300"
             >
-              <span className="text-yellow-300 font-bold text-sm" style={{ fontFamily: "'Press Start 2P', monospace" }}>
-                👋 {user.name}
+              <span
+                className="text-yellow-300 font-bold text-sm"
+                style={{ fontFamily: "'Press Start 2P', monospace" }}
+              >
+                👋 {user.username}
               </span>
-              <button 
-                onClick={logout} 
+              <button
+                onClick={logout}
                 className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded border-2 border-black transition-all text-xs"
                 style={{ fontFamily: "'Press Start 2P', monospace" }}
               >
@@ -94,7 +146,10 @@ export default function Home() {
       {isLoading && (
         <div className="absolute top-6 right-6 z-50">
           <div className="bg-black/80 px-4 py-2 rounded-lg border-2 border-gray-600">
-            <span className="text-gray-400 text-xs" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+            <span
+              className="text-gray-400 text-xs"
+              style={{ fontFamily: "'Press Start 2P', monospace" }}
+            >
               Loading...
             </span>
           </div>
@@ -131,13 +186,21 @@ export default function Home() {
             </motion.div>
             <div className="flex flex-col space-y-6 items-center">
               <TetorisButton onClick={startGame} label="PLAY" color="blue" />
-              <TetorisButton onClick={openLeaderboard} label="RANKING" color="green" />
-              <TetorisButton onClick={openSettings} label="SETTINGS" color="pink" />
+              <TetorisButton
+                onClick={openLeaderboard}
+                label="RANKING"
+                color="green"
+              />
+              <TetorisButton
+                onClick={openSettings}
+                label="SETTINGS"
+                color="pink"
+              />
               <TetorisButton onClick={quitGame} label="QUIT" color="purple" />
             </div>
           </div>
         )}
       </motion.div>
     </div>
-  )
+  );
 }

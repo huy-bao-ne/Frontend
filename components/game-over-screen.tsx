@@ -1,74 +1,103 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { useLeaderboard } from "@/lib/hooks/useLeaderboard"
-import { useAuth } from "@/lib/hooks/useAuth"
-import HighScoreInput from "./high-score-input"
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useLeaderboard } from "@/lib/hooks/useLeaderboard";
+import { useAuth } from "@/lib/hooks/useAuth";
+// import HighScoreInput from "./high-score-input";
 
-// KIEU DU LIEU CHO PROPS CUA COMPONENT
-interface GameOverScreenProps { 
-  score: number // diem so cuoi game
-  onRestart: () => void // ham khoi dong lai game
-  onMainMenu: () => void // ham ve menu chinh
-  onLeaderboard?: () => void // ham xem bang xep hang
-  onLogin?: () => void // ham chuyen den trang dang nhap
+interface GameOverScreenProps {
+  score: number;
+  onRestart: () => void;
+  onMainMenu: () => void;
+  onLeaderboard?: () => void;
+  onLogin?: () => void;
 }
 
-// COMPONENT MAN HINH GAME OVER
-export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderboard, onLogin }: GameOverScreenProps) {
-  const { isTopScore, addScore, leaderboard } = useLeaderboard() // hook xu ly bang xep hang
-  const { user, isLoading } = useAuth() // hook xu ly dang nhap
-  const [showHighScoreInput, setShowHighScoreInput] = useState(false) // hien thi form nhap ten
-  const [newRank, setNewRank] = useState<number | null>(null) // thu hang moi dat duoc
-  const [hasCheckedScore, setHasCheckedScore] = useState(false) // da kiem tra diem chua
+// HÀM HELPER: Lưu điểm vào localStorage cho người chơi khách
+const addGuestScore = (score: number) => {
+  if (score <= 0) return;
+  try {
+    const guestScoresRaw = localStorage.getItem("tetris_guest_scores");
+    const guestScores = guestScoresRaw ? JSON.parse(guestScoresRaw) : [];
+    guestScores.push(score);
+    localStorage.setItem("tetris_guest_scores", JSON.stringify(guestScores));
+  } catch (error) {
+    console.error("Lỗi khi lưu điểm của khách:", error);
+  }
+};
 
-  // KIEM TRA DIEM CO THUOC TOP KHONG
+export default function GameOverScreen({
+  score,
+  onRestart,
+  onMainMenu,
+  onLeaderboard,
+  onLogin,
+}: GameOverScreenProps) {
+  const { fetchLeaderboard, addScore, leaderboard } = useLeaderboard();
+
+  const { user, isLoading } = useAuth();
+
+  // Chỉ cần 2 state này để quản lý toàn bộ logic
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
   useEffect(() => {
-    // cho auth loading xong truoc khi kiem tra
-    if (!hasCheckedScore && !isLoading) {
-      const isHighScore = isTopScore(score)
-      console.log('Kiem tra diem:', { score, isHighScore, user: user?.name })
-      
-      if (isHighScore) {
-        // neu user da dang nhap, tu dong luu diem voi ten cua ho
-        if (user) {
-          console.log('User logged in, auto-saving score:', user.name)
-          const rank = addScore(user.name, score)
-          setNewRank(rank)
-        } else {
-          // neu chua dang nhap, hien thi form nhap ten
-          console.log('User not logged in, showing input form')
-          setShowHighScoreInput(true)
+    // Chờ cho đến khi xác định xong trạng thái đăng nhập
+    if (isLoading) {
+      return;
+    }
+
+    // Logic cho người chơi chưa đăng nhập
+    if (!user && score > 0) {
+      addGuestScore(score);
+    }
+
+    // Một useEffect duy nhất để xử lý tất cả logic một cách rõ ràn
+
+    // Logic tự động lưu điểm cho người chơi ĐÃ ĐĂNG NHẬP
+    const savePlayerScore = async () => {
+      // Điều kiện chạy: Đã đăng nhập, có điểm, và chưa gửi lần nào
+      if (user && score > 0 && !hasSubmitted) {
+        setHasSubmitted(true); // Đánh dấu đã gửi để tránh gọi lại
+        setSaveMessage("Đang lưu điểm của bạn...");
+        try {
+          await addScore(score);
+          setSaveMessage("Đã lưu điểm thành công!");
+          await fetchLeaderboard(); // Cập nhật lại bảng xếp hạng mini
+        } catch (error) {
+          setSaveMessage("Lỗi: Không thể lưu điểm.");
         }
       }
-      setHasCheckedScore(true)
-    }
-  }, [score, isTopScore, hasCheckedScore, user, addScore, isLoading])
+    };
 
-  const handleSubmitScore = (name: string) => {
-    const rank = addScore(name, score)
-    setNewRank(rank)
-    setShowHighScoreInput(false)
-  }
+    savePlayerScore();
+  }, [isLoading, user, score, hasSubmitted, addScore, fetchLeaderboard]);
 
-  const handleSkipScore = () => {
-    setShowHighScoreInput(false)
-  }
+  // const handleSubmitScore = (name: string) => {
+  //   const rank = addScore(name, score);
+  //   setNewRank(rank);
+  //   setShowHighScoreInput(false);
+  // };
 
-  if (showHighScoreInput) {
-    return (
-      <div className="flex items-center justify-center">
-        <HighScoreInput
-          score={score}
-          rank={1} // Sẽ được tính chính xác khi submit
-          onSubmit={handleSubmitScore}
-          onSkip={handleSkipScore}
-        />
-      </div>
-    )
-  }
-  return ( // cac animation
+  // const handleSkipScore = () => {
+  //   setShowHighScoreInput(false);
+  // };
+
+  // if (showHighScoreInput) {
+  //   return (
+  //     <div className="flex items-center justify-center">
+  //       <HighScoreInput
+  //         score={score}
+  //         rank={1} // Sẽ được tính chính xác khi submit
+  //         onSubmit={handleSubmitScore}
+  //         onSkip={handleSkipScore}
+  //       />
+  //     </div>
+  //   );
+  // }
+  return (
+    // cac animation
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -84,7 +113,7 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
       </h1>
 
       {/* thong bao rank moi */}
-      {newRank && (
+      {/* {newRank && (
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -137,11 +166,14 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
             </motion.span>
           )}
         </motion.div>
-      )}
+      )} */}
 
       {/* diem so */}
       <div className="bg-black p-4 w-full">
-        <h2 className="text-white text-center mb-2 text-sm" style={{ fontFamily: "'Press Start 2P', monospace" }}>
+        <h2
+          className="text-white text-center mb-2 text-sm"
+          style={{ fontFamily: "'Press Start 2P', monospace" }}
+        >
           YOUR SCORE
         </h2>
         <p className="text-4xl font-bold font-mono text-center text-[#00ff00]">
@@ -167,14 +199,14 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
             </h3>
             <div className="space-y-3">
               {leaderboard.slice(0, 3).map((entry, index) => {
-                const isCurrentPlayer = user && entry.name === user.name
+                const isCurrentPlayer = user && entry.name === user.name;
                 const rankColors = [
                   "from-yellow-400 to-yellow-500", // vang - vi tri nhat
-                  "from-gray-300 to-gray-400",     // bac - vi tri nhi  
-                  "from-amber-600 to-amber-700"    // dong - vi tri ba
-                ]
-                const rankNumbers = ["1ST", "2ND", "3RD"]
-                
+                  "from-gray-300 to-gray-400", // bac - vi tri nhi
+                  "from-amber-600 to-amber-700", // dong - vi tri ba
+                ];
+                const rankNumbers = ["1ST", "2ND", "3RD"];
+
                 return (
                   <motion.div
                     key={`${entry.rank}-${entry.name}`}
@@ -182,13 +214,15 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.5 + index * 0.1, duration: 0.3 }}
                     className={`flex items-center justify-between p-3 rounded-lg border-3 transition-all hover:scale-[1.02] ${
-                      isCurrentPlayer 
-                        ? "bg-gradient-to-r from-yellow-300 to-yellow-400 border-yellow-600 text-black shadow-lg" 
+                      isCurrentPlayer
+                        ? "bg-gradient-to-r from-yellow-300 to-yellow-400 border-yellow-600 text-black shadow-lg"
                         : "bg-gradient-to-r from-gray-800 to-gray-900 border-gray-600 text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${rankColors[index]} border-2 border-black flex items-center justify-center shadow-md flex-shrink-0`}>
+                      <div
+                        className={`w-8 h-8 rounded-full bg-gradient-to-br ${rankColors[index]} border-2 border-black flex items-center justify-center shadow-md flex-shrink-0`}
+                      >
                         <span
                           className="text-black text-xs font-bold"
                           style={{ fontFamily: "'Press Start 2P', monospace" }}
@@ -198,14 +232,18 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
                       </div>
                       <div className="flex flex-col flex-1 min-w-0">
                         <span
-                          className={`text-xs font-bold truncate ${isCurrentPlayer ? 'text-black' : 'text-white'}`}
+                          className={`text-xs font-bold truncate ${
+                            isCurrentPlayer ? "text-black" : "text-white"
+                          }`}
                           style={{ fontFamily: "'Press Start 2P', monospace" }}
                           title={entry.name}
                         >
                           {entry.name}
                         </span>
                         <span
-                          className={`text-xs opacity-75 ${isCurrentPlayer ? 'text-black' : 'text-gray-300'}`}
+                          className={`text-xs opacity-75 ${
+                            isCurrentPlayer ? "text-black" : "text-gray-300"
+                          }`}
                           style={{ fontFamily: "'Press Start 2P', monospace" }}
                         >
                           {rankNumbers[index]} PLACE
@@ -214,30 +252,31 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
                     </div>
                     <div className="text-right flex-shrink-0 ml-2">
                       <span
-                        className={`font-bold ${isCurrentPlayer ? 'text-black' : 'text-yellow-300'} ${
-                          entry.score >= 1000000 ? 'text-xs' : 'text-sm'
-                        }`}
+                        className={`font-bold ${
+                          isCurrentPlayer ? "text-black" : "text-yellow-300"
+                        } ${entry.score >= 1000000 ? "text-xs" : "text-sm"}`}
                         style={{ fontFamily: "'Press Start 2P', monospace" }}
                       >
-                        {entry.score >= 1000000 
+                        {entry.score >= 1000000
                           ? `${Math.floor(entry.score / 1000)}K`
-                          : entry.score.toLocaleString()
-                        }
+                          : entry.score.toLocaleString()}
                       </span>
                       <div
-                        className={`text-xs opacity-75 ${isCurrentPlayer ? 'text-black' : 'text-gray-300'}`}
+                        className={`text-xs opacity-75 ${
+                          isCurrentPlayer ? "text-black" : "text-gray-300"
+                        }`}
                         style={{ fontFamily: "'Press Start 2P', monospace" }}
                       >
                         POINTS
                       </div>
                     </div>
                   </motion.div>
-                )
+                );
               })}
             </div>
-            
+
             {/* hien thi rank hien tai neu khong trong top 3 */}
-            {newRank && newRank > 3 && (
+            {/* {newRank && newRank > 3 && (
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -273,14 +312,13 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
                   <div className="text-right flex-shrink-0 ml-2">
                     <span
                       className={`font-bold text-yellow-300 ${
-                        score >= 1000000 ? 'text-xs' : 'text-sm'
+                        score >= 1000000 ? "text-xs" : "text-sm"
                       }`}
                       style={{ fontFamily: "'Press Start 2P', monospace" }}
                     >
-                      {score >= 1000000 
+                      {score >= 1000000
                         ? `${Math.floor(score / 1000)}K`
-                        : score.toLocaleString()
-                      }
+                        : score.toLocaleString()}
                     </span>
                     <div
                       className="text-xs opacity-75 text-emerald-100"
@@ -291,7 +329,7 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
                   </div>
                 </div>
               </motion.div>
-            )}
+            )} */}
           </motion.div>
         )}
 
@@ -303,7 +341,7 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
           className="flex flex-col gap-4"
         >
           {/* khuyen khich nguoi dung chua dang nhap */}
-          {!user && !showHighScoreInput && (
+          {!isLoading && !user && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -373,5 +411,5 @@ export default function GameOverScreen({ score, onRestart, onMainMenu, onLeaderb
         </motion.div>
       </div>
     </motion.div>
-  )
+  );
 }
